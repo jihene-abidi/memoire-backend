@@ -114,6 +114,124 @@ def update_job_offer(job_id):
 @app.route('/search-job-offers', methods=['GET'])
 def search_jobs():
     return search_job_offers()
+
+
+@app.route('/users/<user_id>/cvs', methods=['POST'])
+def add_cv_for_user(user_id):
+    if 'file' not in request.files:
+        return jsonify({'error': 'CV PDF file is required'}), 400
+
+    file = request.files['file']
+    title = request.form.get('title')
+    visibility = request.form.get('visibility', 'private')
+
+    response, status_code = add_cv(user_id, file, title, visibility)
+    return jsonify(response), status_code
+
+
+@app.route("/users/<user_id>/cvs", methods=["GET"])
+def get_user_cvs(user_id):
+    return get_all_user_cvs(user_id)
+
+
+
+@app.route("/users/<user_id>/cvs/<cv_id>", methods=["PUT"])
+def update_cv(user_id, cv_id):
+    data = request.json
+    return update_user_cv(user_id, cv_id, data)
+
+
+
+
+
+@app.route("/users/<user_id>/cvs/<cv_id>", methods=["DELETE"])
+def delete_cv(user_id, cv_id):
+    return delete_user_cv(user_id, cv_id)
+
+
+@app.route("/cvs/public", methods=["GET"])
+def get_public_cvs():
+    return get_all_public_cvs()
+
+
+
+
+@app.route('/cvs/search', methods=['GET'])
+def search_public_cvs():
+    query = request.args.get('q', '')
+    response, status_code = search_public_cvs_logic(query)
+    return jsonify(response), status_code
+
+
+
+@app.route('/cvs/download/<cv_id>', methods=['GET'])
+def download_cv(cv_id):
+    response, status_code = download_cv_logic(cv_id)
+    if isinstance(response, dict):
+        return jsonify(response), status_code
+    return response
+
+
+@app.route("/cv-chat/<cv_id>", methods=["POST"])
+def cv_chat(cv_id):
+    data = request.json
+    question = data.get("question")
+
+    if not question:
+        return jsonify({"error": "Missing 'question'"}), 400
+
+    # Get the file path response
+    response, status = get_cv_file_path(cv_id)
+
+    # If the CV isn’t found
+    if status != 200:
+        return response, status
+
+
+    # Extract the actual path from the JSON response
+    pdf_path = response.get_json()["file_path"]
+
+
+    pdf_path = r"{}".format(pdf_path)
+
+    # Extract text from PDF
+    cv_text = extract_text_from_pdf(pdf_path)
+    if not cv_text:
+        return jsonify({"error": "Failed to extract text from PDF"}), 500
+
+    # Call your chat function
+    answer ,history= get_cv_chat_response(cv_id,cv_text, question)
+        # Optionally return full history for UI
+
+    return jsonify({"answer": answer, "history": history}), 200
+
+@app.route("/cv-analysis/<cv_id>", methods=["POST"])
+def cv_analysis(cv_id):
+    if not cv_id:
+        return jsonify({"error": "Missing 'cv_id'"}), 400
+
+    response, status = get_cv_file_path(cv_id)
+    if status != 200:
+        return response, status
+
+    pdf_path = r"{}".format(response.get_json()["file_path"])
+    cv_text = extract_text_from_pdf(pdf_path)
+
+    if not cv_text:
+        return jsonify({"error": "Failed to extract text from PDF"}), 500
+
+    try:
+        analysis_result = analyze_cv_text(cv_text)
+    except ValueError as e:
+        return jsonify({
+            "error": str(e),
+        }), 500
+
+    return jsonify({
+        "cv_analysis": analysis_result
+    }), 200
+
+
 # Start the Flask app
 if __name__ == '__main__':
     app.run(debug=True)
