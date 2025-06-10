@@ -63,7 +63,7 @@ def update_profile_image_route(user_id):
 
 
 @app.route('/request-reset-password', methods=['POST'])
-def request_reset_password():
+def request_reset_password():   
     return request_reset_password_logic()
 
 
