@@ -18,6 +18,8 @@ load_dotenv()
 # Initialize the serializer with a secret key
 s = URLSafeTimedSerializer(os.getenv("EMAIL_TOKEN_SECRET"))
 
+
+
 def signup():
     data = request.json
     role = data.get("role")
@@ -127,6 +129,7 @@ def update_profile_image(user_id, image):
     # Generate a unique filename
     _, file_extension = os.path.splitext(secure_filename(image.filename))
     unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+    relative_path = os.path.join('uploads', unique_filename)
     filepath = os.path.join(os.getenv('UPLOAD_FOLDER'), unique_filename)
 
     # Save new image
@@ -135,7 +138,7 @@ def update_profile_image(user_id, image):
     # Update user document with new image path
     mongo.db.users.update_one(
         {"_id": ObjectId(user_id)},
-        {"$set": {"profile_image": filepath}}
+        {"$set": {"profile_image": relative_path}}
     )
 
     return jsonify({

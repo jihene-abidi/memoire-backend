@@ -5,7 +5,7 @@ from db import mongo,mail
 from job import create_job_offers,delete_job_offer_by_id,list_all_job_offers,update_job_offer_by_id,get_job_offer_by_id,search_job_offers
 from users import signup,verify_email_token,update_user_profile,sign_in_user,update_profile_image,request_reset_password_logic,reset_password_logic,get_all_users,get_user_by_id,get_role_by_id
 from flask_cors import CORS
-
+from flask import send_from_directory
 
 # Load environment variables from .env
 load_dotenv()
@@ -25,7 +25,9 @@ app.config["MONGO_URI"] = os.getenv("MONGO_URI")
 mongo.init_app(app)
 mail.init_app(app)
 
-
+@app.route('/uploads/<path:filename>')
+def serve_upload(filename):
+    return send_from_directory(os.getenv('UPLOAD_FOLDER'), filename)
 
 @app.route('/signup', methods=['POST'])
 def user_signup():
