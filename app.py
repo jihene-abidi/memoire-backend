@@ -6,7 +6,7 @@ from job import create_job_offers,delete_job_offer_by_id,list_all_job_offers,upd
 from users import signup,verify_email_token,update_user_profile,sign_in_user,update_profile_image,request_reset_password_logic,reset_password_logic,get_all_users,get_user_by_id,get_role_by_id
 from flask_cors import CORS
 from flask import send_from_directory
-from cv import get_all_user_cvs, add_cv, update_user_cv, delete_user_cv, get_all_public_cvs, search_public_cvs_logic, download_cv_logic, get_cv_file_path, get_cv_path
+from cv import get_all_user_cvs, add_cv, update_user_cv, delete_user_cv, get_all_public_cvs, search_public_cvs_logic, download_cv_logic, get_cv_file_path, get_cv_path,get_cv_by_id
 # Load environment variables from .env
 load_dotenv()
 
@@ -236,6 +236,10 @@ def cv_analysis(cv_id):
 @app.route('/cv-path/<cv_id>')
 def get_cv_path_url(cv_id):
     return get_cv_path(cv_id)
+
+@app.route('/cv/<cv_id>')
+def get_cv(cv_id):
+    return get_cv_by_id(cv_id)
 
 @app.route('/static/uploads/cvs/<filename>')
 def download_cv_file(filename):
