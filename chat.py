@@ -132,6 +132,77 @@ def extract_text_from_pdf(pdf_path):
         print(f"Error: {e}")
         return None
 
+def analyze_cv_text_skills(cv_text):
+    system_prompt = (
+        "You are an expert that extracts owner name, technologies, skills, education, languages, snapshot, hashtags, certifications, atouts, experience, email, and phone number from text."
+    )
+
+    analysis_question = (
+      ''' Analyse ce CV et retourne uniquement ce JSON :
+    
+    {
+      "owner": "",                   // nom complet du propriétaire du CV
+      "contact": {
+        "email": "",                 // extrait l'email
+        "phone_number": ""           // extrait le numéro de téléphone
+      },
+      "technologies": ["python", "java", ...],
+      "skills": ["résolution de problèmes", "travail en équipe", ...],
+      "experience": [
+        {
+          "company": "",
+          "duration": "",
+          "position": ""
+        }
+      ],
+      "levels": {
+        "education_level": 0,        // évalue le niveau d'éducation entre 0 et 100%
+        "experience_level": 0,       // évalue le niveau d’expérience pro en %
+        "skills_level": 0,           // estime la polyvalence et la qualité des compétences
+        "language_level": 0          // estime la maîtrise des langues mentionnées
+      },
+      "education": [
+        {
+          "degree": "",
+          "institution": "",
+          "year": ""
+        }
+      ],
+      "languages": ["Français (Courant)", "Anglais (Courant)", ...],
+      "snapshot": "",               // extrait le résumé professionnel
+      "hashtags": ["#DevOps", "#Automation", ...],
+      "certifications": ["AWS Certified Solutions Architect", "FinOps Cloud & AI", ...],
+      "atouts": ["Automatisation des infrastructures", "CI/CD avancé", "Leadership", ...]
+    }
+    
+    **Base-toi uniquement sur les infos disponibles dans le CV**, et ne retourne **que du JSON** (pas de texte autour).
+    '''
+
+    )
+
+    memory = ConversationBufferMemory(return_messages=True)
+    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+
+    conversation = ConversationChain(
+        llm=llm,
+        memory=memory,
+        verbose=False,
+    )
+
+    memory.chat_memory.add_message(SystemMessage(content=system_prompt + f"\n\nCV:\n{cv_text}. Now, {analysis_question}"))
+    memory.chat_memory.add_message(AIMessage(content="Understood. Ready to analyze."))
+
+    answer = conversation.run(analysis_question)
+
+    # Clean the response if it has code formatting
+    cleaned_answer = re.sub(r"```(?:json)?\n(.*?)\n```", r"\1", answer, flags=re.DOTALL).strip()
+
+    try:
+        analysis_json = json.loads(cleaned_answer)
+    except Exception:
+        raise ValueError(f"Could not parse analysis response:\n{answer}")
+
+    return analysis_json
 
 
 
