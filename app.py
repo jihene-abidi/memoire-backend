@@ -1,9 +1,11 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,send_file
 import os
 from dotenv import load_dotenv
 from db import mongo,mail
 from job import create_job_offers,delete_job_offer_by_id,list_all_job_offers,update_job_offer_by_id,get_job_offer_by_id,search_job_offers
-from users import signup,verify_email_token,update_user_profile,sign_in_user,update_profile_image,request_reset_password_logic,reset_password_logic,get_all_users,get_user_by_id,get_role_by_id
+from users import signup,verify_email_token,update_user_profile,sign_in_user,update_profile_image,request_reset_password_logic,reset_password_logic,get_all_users,get_user_by_id,get_role_by_id,update_user_passwords
+from cv import add_cv,get_all_user_cvs,update_user_cv,delete_user_cv,get_all_public_cvs,search_public_cvs_logic,download_cv_logic,get_cv_file_path
+#from chat import get_cv_chat_response,extract_text_from_pdf,analyze_cv_text
 from flask_cors import CORS
 
 
@@ -25,7 +27,7 @@ app.config["MONGO_URI"] = os.getenv("MONGO_URI")
 mongo.init_app(app)
 mail.init_app(app)
 
-
+# Authentification
 
 @app.route('/signup', methods=['POST'])
 def user_signup():
@@ -37,29 +39,10 @@ def verify_email(token):
     return verify_email_token(token)
 
 
-@app.route('/update-profile/<user_id>', methods=['PUT'])
-def update_profile(user_id):
-    data = request.json
-    return update_user_profile(user_id, data)
-
-
 @app.route('/sign-in', methods=['POST'])
 def sign_in():
     data = request.json
     return sign_in_user(data)
-
-
-
-@app.route('/update-profile-image/<user_id>', methods=['POST'])
-def update_profile_image_route(user_id):
-    if 'image' not in request.files:
-        return jsonify({"error": "No image provided"}), 400
-
-    image = request.files['image']
-    if image.filename == '':
-        return jsonify({"error": "Empty filename"}), 400
-
-    return update_profile_image(user_id, image)  # Call the function from the controller
 
 
 @app.route('/request-reset-password', methods=['POST'])
@@ -83,10 +66,39 @@ def fetch_user(user_id):
 def fetch_role(user_id):
     return get_role_by_id(user_id)
 
+@app.route("/update-password/<user_id>", methods=["POST"])
+def update_password(user_id):
+    data = request.json
+    old_password = data.get("old_password")
+    new_password = data.get("new_password")
+
+    return update_user_passwords(user_id, old_password, new_password)
+
+# gestion profil
+
+@app.route('/update-profile/<user_id>', methods=['PUT'])
+def update_profile(user_id):
+    data = request.json
+    return update_user_profile(user_id, data)
+
+
+@app.route('/update-profile-image/<user_id>', methods=['POST'])
+def update_profile_image_route(user_id):
+    if 'image' not in request.files:
+        return jsonify({"error": "No image provided"}), 400
+
+    image = request.files['image']
+    if image.filename == '':
+        return jsonify({"error": "Empty filename"}), 400
+
+    return update_profile_image(user_id, image)  # Call the function from the controller
+
+
+
 # Access the job_offers collection
 job_offers = mongo.db.job_offers
 
-
+# gestion des offres d'emploi
 
 @app.route('/create-job-offer', methods=['POST'])
 def create_job_offer():
@@ -116,6 +128,8 @@ def search_jobs():
     return search_job_offers()
 
 
+# gestion des CV
+
 @app.route('/users/<user_id>/cvs', methods=['POST'])
 def add_cv_for_user(user_id):
     if 'file' not in request.files:
@@ -141,9 +155,6 @@ def update_cv(user_id, cv_id):
     return update_user_cv(user_id, cv_id, data)
 
 
-
-
-
 @app.route("/users/<user_id>/cvs/<cv_id>", methods=["DELETE"])
 def delete_cv(user_id, cv_id):
     return delete_user_cv(user_id, cv_id)
@@ -152,8 +163,6 @@ def delete_cv(user_id, cv_id):
 @app.route("/cvs/public", methods=["GET"])
 def get_public_cvs():
     return get_all_public_cvs()
-
-
 
 
 @app.route('/cvs/search', methods=['GET'])
@@ -172,64 +181,64 @@ def download_cv(cv_id):
     return response
 
 
-@app.route("/cv-chat/<cv_id>", methods=["POST"])
-def cv_chat(cv_id):
-    data = request.json
-    question = data.get("question")
+# @app.route("/cv-chat/<cv_id>", methods=["POST"])
+# def cv_chat(cv_id):
+#     data = request.json
+#     question = data.get("question")
 
-    if not question:
-        return jsonify({"error": "Missing 'question'"}), 400
+#     if not question:
+#         return jsonify({"error": "Missing 'question'"}), 400
 
-    # Get the file path response
-    response, status = get_cv_file_path(cv_id)
+#     # Get the file path response
+#     response, status = get_cv_file_path(cv_id)
 
-    # If the CV isn’t found
-    if status != 200:
-        return response, status
-
-
-    # Extract the actual path from the JSON response
-    pdf_path = response.get_json()["file_path"]
+#     # If the CV isn’t found
+#     if status != 200:
+#         return response, status
 
 
-    pdf_path = r"{}".format(pdf_path)
+#     # Extract the actual path from the JSON response
+#     pdf_path = response.get_json()["file_path"]
 
-    # Extract text from PDF
-    cv_text = extract_text_from_pdf(pdf_path)
-    if not cv_text:
-        return jsonify({"error": "Failed to extract text from PDF"}), 500
 
-    # Call your chat function
-    answer ,history= get_cv_chat_response(cv_id,cv_text, question)
-        # Optionally return full history for UI
+#     pdf_path = r"{}".format(pdf_path)
 
-    return jsonify({"answer": answer, "history": history}), 200
+#     # Extract text from PDF
+#     cv_text = extract_text_from_pdf(pdf_path)
+#     if not cv_text:
+#         return jsonify({"error": "Failed to extract text from PDF"}), 500
 
-@app.route("/cv-analysis/<cv_id>", methods=["POST"])
-def cv_analysis(cv_id):
-    if not cv_id:
-        return jsonify({"error": "Missing 'cv_id'"}), 400
+#     # Call your chat function
+#     answer ,history= get_cv_chat_response(cv_id,cv_text, question)
+#         # Optionally return full history for UI
 
-    response, status = get_cv_file_path(cv_id)
-    if status != 200:
-        return response, status
+#     return jsonify({"answer": answer, "history": history}), 200
 
-    pdf_path = r"{}".format(response.get_json()["file_path"])
-    cv_text = extract_text_from_pdf(pdf_path)
+# @app.route("/cv-analysis/<cv_id>", methods=["POST"])
+# def cv_analysis(cv_id):
+#     if not cv_id:
+#         return jsonify({"error": "Missing 'cv_id'"}), 400
 
-    if not cv_text:
-        return jsonify({"error": "Failed to extract text from PDF"}), 500
+#     response, status = get_cv_file_path(cv_id)
+#     if status != 200:
+#         return response, status
 
-    try:
-        analysis_result = analyze_cv_text(cv_text)
-    except ValueError as e:
-        return jsonify({
-            "error": str(e),
-        }), 500
+#     pdf_path = r"{}".format(response.get_json()["file_path"])
+#     cv_text = extract_text_from_pdf(pdf_path)
 
-    return jsonify({
-        "cv_analysis": analysis_result
-    }), 200
+#     if not cv_text:
+#         return jsonify({"error": "Failed to extract text from PDF"}), 500
+
+#     try:
+#         analysis_result = analyze_cv_text(cv_text)
+#     except ValueError as e:
+#         return jsonify({
+#             "error": str(e),
+#         }), 500
+
+#     return jsonify({
+#         "cv_analysis": analysis_result
+#     }), 200
 
 
 # Start the Flask app
