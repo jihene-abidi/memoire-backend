@@ -1,4 +1,4 @@
-from flask import  jsonify,send_file
+from flask import  url_for,jsonify,send_file
 from werkzeug.utils import secure_filename
 from bson import ObjectId
 import os
@@ -58,7 +58,7 @@ def get_all_user_cvs(user_id):
         cv["user_id"] = str(cv["user_id"])
         cvs_list.append(cv)
 
-    return jsonify({"cvs": cvs_list}), 200
+    return jsonify( cvs_list), 200
 
 def update_user_cv(user_id, cv_id, data):
     user_id = ObjectId(user_id)
@@ -136,7 +136,6 @@ def search_public_cvs_logic(query):
 
 def download_cv_logic(cv_id):
 
-
     cv = mongo.db.cvs.find_one({"_id": ObjectId(cv_id)})
     if not cv:
         return {"error": "CV not found"}, 404
@@ -160,3 +159,16 @@ def get_cv_file_path(cv_id):
 
     return jsonify({"file_path": cv.get("file_path")}), 200
 
+def get_cv_path(cv_id):
+    cv = mongo.db.cvs.find_one({"_id": ObjectId(cv_id)})
+    if not cv:
+        return jsonify({"error": "CV not found"}), 404
+
+    file_path = cv.get("file_path")
+    if not file_path or not os.path.exists(file_path):  # optional file existence check
+        return jsonify({"error": "File not found on server"}), 404
+
+    return jsonify({
+        "source": url_for('static', filename=file_path, _external=True),  # convert to full URL
+        "name": os.path.basename(file_path)
+    }), 200
