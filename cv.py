@@ -172,3 +172,34 @@ def get_cv_path(cv_id):
         "source": url_for('static', filename=file_path, _external=True),  # convert to full URL
         "name": os.path.basename(file_path)
     }), 200
+
+
+def get_cv_by_id(cv_id):
+    try:
+        cv = mongo.db.cvs.find_one({"_id": ObjectId(cv_id)})
+    except Exception:
+        return jsonify({"error": "Invalid CV ID format"}), 400
+
+    if not cv:
+        return jsonify({"error": "CV not found"}), 404
+    
+     # Fetch user info
+    user = mongo.db.users.find_one({"_id": cv["user_id"]})
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    # Prepare response (convert ObjectId to string, exclude file path if not needed)
+    result = {
+        "_id": str(cv["_id"]),
+        "title": cv.get("title", ""),
+        "visibility": cv.get("visibility", "private"),
+        "file_path": cv.get("file_path", None),
+        "created_at": cv.get("created_at"),
+        "user": {
+            "_id": str(user["_id"]),
+            "userName": user.get("userName", ""),
+            "roles": user.get("roles", {})
+        }
+    }
+
+    return jsonify(result), 200
