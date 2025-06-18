@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from db import mongo
 
-def add_cv(user_id, file, title, visibility='private'):
+def add_cv(user_id, file, title, expertise, cv_txt, visibility='private'):
 
 
     # Validate inputs
@@ -36,6 +36,8 @@ def add_cv(user_id, file, title, visibility='private'):
     cv_data = {
         "user_id": ObjectId(user_id),
         "title": title,
+        "cv_txt": cv_txt,
+        "expertise": expertise,
         "visibility": visibility,
         "file_path": filepath,
         "created_at": datetime.now()
@@ -192,6 +194,8 @@ def get_cv_by_id(cv_id):
     result = {
         "_id": str(cv["_id"]),
         "title": cv.get("title", ""),
+        "cv_txt": cv.get("title", ""),
+        "expertise": cv.get("expertise", ""),
         "visibility": cv.get("visibility", "private"),
         "file_path": cv.get("file_path", None),
         "created_at": cv.get("created_at"),

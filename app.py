@@ -5,8 +5,10 @@ from db import mongo,mail
 from job import create_job_offers,delete_job_offer_by_id,list_all_job_offers,update_job_offer_by_id,get_job_offer_by_id,search_job_offers
 from users import signup,verify_email_token,update_user_profile,sign_in_user,update_profile_image,request_reset_password_logic,reset_password_logic,get_all_users,get_user_by_id,get_role_by_id
 from flask_cors import CORS
+import json
 from flask import send_from_directory
 from cv import get_all_user_cvs, add_cv, update_user_cv, delete_user_cv, get_all_public_cvs, search_public_cvs_logic, download_cv_logic, get_cv_file_path, get_cv_path,get_cv_by_id
+from chat import extract_text_from_pdf, get_cv_chat_response, extract_text_from_pdf,analyze_cv_text, analyze_cv_text_skills
 # Load environment variables from .env
 load_dotenv()
 
@@ -126,8 +128,15 @@ def add_cv_for_user(user_id):
     file = request.files['file']
     title = request.form.get('title')
     visibility = request.form.get('visibility', 'private')
+    
+    cv_txt = request.form.get('cv_txt')
+    expertise_raw = request.form.get('expertise')
+    try:
+        expertise = json.loads(expertise_raw) if expertise_raw else {}
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Invalid JSON in expertise field'}), 400
 
-    response, status_code = add_cv(user_id, file, title, visibility)
+    response, status_code = add_cv(user_id, file, title,expertise, cv_txt, visibility)
     return jsonify(response), status_code
 
 
@@ -245,6 +254,39 @@ def get_cv(cv_id):
 def download_cv_file(filename):
     return send_from_directory('uploads/cvs', filename)
     
+@app.route("/cv-analysis-text", methods=["POST"])
+def cv_analysis_text():
+    data = request.get_json()
+
+    if not data or "cv_txt" not in data:
+        return jsonify({"error": "Missing 'cv_txt'"}), 400
+
+    cv_text = data["cv_txt"]
+
+    if not cv_text.strip():
+        return jsonify({"error": "CV text is empty"}), 400
+
+    try:
+        analysis_result = analyze_cv_text_skills(cv_text)
+    except ValueError as e:
+        return jsonify({
+            "error": str(e),
+        }), 500
+
+    return jsonify({
+        "owner": analysis_result.get("owner", ""),
+        "contact": analysis_result.get("contact", {}),
+        "technologies": analysis_result.get("technologies", []),
+        "skills": analysis_result.get("skills", []),
+        "experience": analysis_result.get("experience", []),
+        "levels": analysis_result.get("levels", {}),
+        "education": analysis_result.get("education", []),
+        "languages": analysis_result.get("languages", []),
+        "snapshot": analysis_result.get("snapshot", ""),
+        "hashtags": analysis_result.get("hashtags", []),
+        "certifications": analysis_result.get("certifications", []),
+        "atouts": analysis_result.get("atouts", []),
+    }), 200
 # Start the Flask app
 if __name__ == '__main__':
     app.run(debug=True)
