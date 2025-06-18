@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from db import mongo,mail
 from job import create_job_offers,delete_job_offer_by_id,list_all_job_offers,update_job_offer_by_id,get_job_offer_by_id,search_job_offers
-from users import signup,verify_email_token,update_user_profile,sign_in_user,update_profile_image,request_reset_password_logic,reset_password_logic,get_all_users,get_user_by_id,get_role_by_id
+from users import signup,verify_email_token,update_user_profile,sign_in_user,update_profile_image,request_reset_password_logic,reset_password_logic,get_all_users,get_user_by_id,get_role_by_id,update_user_passwords
 from flask_cors import CORS
 import json
 from flask import send_from_directory
@@ -74,6 +74,14 @@ def request_reset_password():
 @app.route('/reset-password', methods=['POST'])
 def reset_password():
     return reset_password_logic()
+
+@app.route("/update-password/<user_id>", methods=["POST"])
+def update_password(user_id):
+    data = request.json
+    old_password = data.get("old_password")
+    new_password = data.get("new_password")
+
+    return update_user_passwords(user_id, old_password, new_password)
 
 @app.route('/users', methods=['GET'])
 def list_users():
