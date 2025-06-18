@@ -18,6 +18,8 @@ load_dotenv()
 # Initialize the serializer with a secret key
 s = URLSafeTimedSerializer(os.getenv("EMAIL_TOKEN_SECRET"))
 
+
+
 def signup():
     data = request.json
     role = data.get("role")
@@ -127,6 +129,7 @@ def update_profile_image(user_id, image):
     # Generate a unique filename
     _, file_extension = os.path.splitext(secure_filename(image.filename))
     unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+    relative_path = os.path.join('uploads', unique_filename)
     filepath = os.path.join(os.getenv('UPLOAD_FOLDER'), unique_filename)
 
     # Save new image
@@ -135,7 +138,7 @@ def update_profile_image(user_id, image):
     # Update user document with new image path
     mongo.db.users.update_one(
         {"_id": ObjectId(user_id)},
-        {"$set": {"profile_image": filepath}}
+        {"$set": {"profile_image": relative_path}}
     )
 
     return jsonify({
@@ -190,41 +193,6 @@ def update_user_password(user_id, new_hashed_password):
             "$unset": {"reset_code": "", "reset_code_expiration": ""}
         }
     )
-
-# Fonction pour changer le mot de passe
-def update_user_passwords(user_id, old_password, new_password):
-    if not old_password or not new_password:
-        return jsonify({"error": "Both old and new passwords are required"}), 400
-
-    try:
-        # Fetch the user from the database
-        user = mongo.db.users.find_one({"_id": ObjectId(user_id)})
-        if not user:
-            return jsonify({"error": "User not found"}), 404
-
-        # Check if the old password matches
-        if not check_password_hash(user["password"], old_password):
-            return jsonify({"error": "Old password is incorrect"}), 401
-
-        # Hash the new password
-        hashed_pw = generate_password_hash(new_password)
-
-        # Update the password and the updated date
-        update_data = {
-            "password": hashed_pw,
-            "updatedAt": datetime.now()
-        }
-
-        result = mongo.db.users.update_one(
-            {"_id": ObjectId(user_id)},
-            {"$set": update_data}
-        )
-
-        return jsonify({"message": "Password updated successfully!"}), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 
 def reset_password_logic():
     email = request.json.get("email")
