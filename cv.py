@@ -26,7 +26,7 @@ def add_cv(user_id, file, title, expertise, cv_txt, visibility='private'):
     # Save file
     unique_filename = f"{uuid.uuid4().hex}{file_extension}"
     upload_folder = os.getenv('UPLOAD_CV_FOLDER', 'uploads/cvs')  # fallback folder
-    filepath = os.path.join(upload_folder, unique_filename)
+    filepath = upload_folder +"/" + unique_filename
     try:
         file.save(filepath)
     except Exception as e:
@@ -171,7 +171,7 @@ def get_cv_path(cv_id):
         return jsonify({"error": "File not found on server"}), 404
 
     return jsonify({
-        "source": url_for('static', filename=file_path, _external=True),  # convert to full URL
+        "source": "http://127.0.0.1:5000/static/"+file_path ,  # convert to full URL
         "name": os.path.basename(file_path)
     }), 200
 
