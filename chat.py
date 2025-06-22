@@ -205,3 +205,33 @@ def analyze_cv_text_skills(cv_text):
     return analysis_json
 
 
+def extract_job_info_from_description(job_text):
+    system_prompt = (
+        "You are an expert HR assistant helping to extract structured information from job descriptions. "
+        "Given a full job description, return the following:"
+        "1. A short summary of the job description (3-5 lines)"
+        "2. A list of required technologies"
+        "3. A list of required skills"
+        "Respond in JSON format like: "
+        '{"summary": "....","technologies": ["tech1", "tech2", ...],"skills": ["skill1", "skill2", ...]}'
+      
+    )
+
+    # Build messages
+    messages = [
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=f"Here is the job description:{job_text}")
+    ]
+
+    # Run LLM without history/memory
+    response = llm.invoke(messages)
+
+    # Try parsing the response as JSON
+    try:
+        #  Remove backticks and code block formatting if present
+        cleaned_answer = re.sub(r"```(?:json)?\n(.*?)\n```", r"\1", response.content, flags=re.DOTALL).strip()
+        parsed = json.loads(cleaned_answer)
+        print (parsed)
+        return parsed
+    except Exception as e:
+        return {"error": "Could not parse LLM output as JSON", "raw_response": response.content, "exception": str(e)}
