@@ -2,13 +2,14 @@ from flask import Flask, request, jsonify
 import os
 from dotenv import load_dotenv
 from db import mongo,mail
-from job import create_job_offers,delete_job_offer_by_id,list_all_job_offers,update_job_offer_by_id,get_job_offer_by_id,search_job_offers
+from job import create_job_offers,delete_job_offer_by_id,list_all_job_offers,get_jobs_by_user,create_job_offer_from_linkedin_url,update_job_offer_by_id,get_job_offer_by_id,search_job_offers
 from users import signup,verify_email_token,update_user_profile,sign_in_user,update_profile_image,request_reset_password_logic,reset_password_logic,get_all_users,get_user_by_id,get_role_by_id,update_user_passwords
 from flask_cors import CORS
 import json
 from flask import send_from_directory
 from cv import get_all_user_cvs, add_cv, update_user_cv, delete_user_cv, get_all_public_cvs, search_public_cvs_logic, download_cv_logic, get_cv_file_path, get_cv_path,get_cv_by_id
 from chat import extract_text_from_pdf, get_cv_chat_response, extract_text_from_pdf,analyze_cv_text, analyze_cv_text_skills
+from apply import apply_to_job,list_applications_by_candidate,list_applications_by_job,list_all_applications
 # Load environment variables from .env
 load_dotenv()
 
@@ -113,6 +114,10 @@ def delete_job_offer(job_id):
 @app.route('/job-offers', methods=['GET'])
 def list_job_offers():
     return list_all_job_offers()
+
+@app.route('/job-offers/by-user/<user_id>', methods=['GET'])
+def list_jobs_by_user(user_id):
+    return get_jobs_by_user(user_id)
 
 @app.route('/job-offers/<job_id>', methods=['GET'])
 def get_job_offer(job_id):
@@ -295,6 +300,30 @@ def cv_analysis_text():
         "certifications": analysis_result.get("certifications", []),
         "atouts": analysis_result.get("atouts", []),
     }), 200
+
+@app.route('/create-job-offer-from-url/<user_id>', methods=['POST'])
+def create_job_offer_from_url_route(user_id):
+    data = request.json
+    job_url = data.get("job_url")
+    visibility = data.get("visibility")
+
+    if not job_url:
+        return jsonify({"error": "Missing job_url"}), 400
+
+    response, status = create_job_offer_from_linkedin_url(user_id, job_url, visibility)
+    return jsonify(response), status
+    
+@app.route('/applications/<candidate_id>', methods=['GET'])
+def get_applications_by_candidate(candidate_id):
+    return list_applications_by_candidate(candidate_id)
+
+@app.route('/applications/job/<job_id>', methods=['GET'])
+def get_applications_by_job(job_id):
+    return list_applications_by_job(job_id)
+
+@app.route('/applications', methods=['GET'])
+def get_all_applications():
+    return list_all_applications()
 # Start the Flask app
 if __name__ == '__main__':
     app.run(debug=True)
