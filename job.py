@@ -29,7 +29,7 @@ def create_job_offers(job_data):
     except Exception as e:
         return jsonify({"message": "Failed to create job offer", "error": str(e)}), 500
 
-def create_job_offer_from_linkedin_url(user_id, job_url, visibility):Add commentMore actions
+def create_job_offer_from_linkedin_url(user_id, job_url, visibility):
     try:
         scraped_data = scrape_linkedin_job_details(job_url)
         extracted_data=extract_job_info_from_description(scraped_data.get("Full Text"))

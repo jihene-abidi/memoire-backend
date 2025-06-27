@@ -116,7 +116,7 @@ def list_job_offers():
     return list_all_job_offers()
 
 @app.route('/job-offers/by-user/<user_id>', methods=['GET'])
-def list_jobs_by_user(user_id):Add commentMore actions
+def list_jobs_by_user(user_id):
     return get_jobs_by_user(user_id)
 
 @app.route('/job-offers/<job_id>', methods=['GET'])
@@ -319,7 +319,7 @@ def get_applications_by_candidate(candidate_id):
 
 @app.route('/applications/job/<job_id>', methods=['GET'])
 def get_applications_by_job(job_id):
-    return list_applications_by_job(job_id)Add commentMore actions
+    return list_applications_by_job(job_id)
 
 @app.route('/applications', methods=['GET'])
 def get_all_applications():
