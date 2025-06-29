@@ -17,6 +17,7 @@ def apply_to_job(candidate_id, job_id, cv_id):
     try:
         # Check if the candidate and CV exist
         cv = mongo.db.cvs.find_one({"_id": ObjectId(cv_id)})
+        job = mongo.db.job_offers.find_one({"_id": ObjectId(job_id)})
         if not cv:
             return jsonify({"error": "CV not found"}), 404
 
@@ -58,11 +59,22 @@ def apply_to_job(candidate_id, job_id, cv_id):
         # Insert application and return ID
         result = mongo.db.applications.insert_one(application_data)
         application_id = str(result.inserted_id)
-
+        candidature = {
+            "userId": candidate_id,
+            "cv": cv,
+            "job": job,
+            "_id": application_id,
+            "candidate_id": candidate_id,
+            "job_id": job_id,
+            "cv_id": cv_id,
+            "cv_text": cv_txt,
+            "cv_path": cv_path,
+            "applied_at": datetime.now(),
+            "application_code": unique_code
+        }
         return jsonify({
             "message": "Application submitted successfully",
-            "application_id": application_id,
-            "application_code": unique_code
+            "candidature": candidature
         }), 201
 
     except Exception as e:
