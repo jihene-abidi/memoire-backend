@@ -324,6 +324,19 @@ def get_applications_by_job(job_id):
 @app.route('/applications', methods=['GET'])
 def get_all_applications():
     return list_all_applications()
+
+@app.route("/apply", methods=["POST"])
+def apply():
+    data = request.json
+    candidate_id = data.get("candidate_id")
+    job_id = data.get("job_id")
+    cv_id = data.get("cv_id")
+
+    if not candidate_id or not job_id or not cv_id:
+        return jsonify({"error": "Missing 'candidate_id', 'job_id' or 'cv_id'"}), 400
+
+    return apply_to_job(candidate_id, job_id, cv_id)
+
 # Start the Flask app
 if __name__ == '__main__':
     app.run(debug=True)
