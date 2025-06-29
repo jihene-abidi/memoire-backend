@@ -11,6 +11,7 @@ from cv import get_all_user_cvs, add_cv, update_user_cv, delete_user_cv, get_all
 from chat import extract_text_from_pdf, get_cv_chat_response, extract_text_from_pdf,analyze_cv_text, analyze_cv_text_skills
 from apply import apply_to_job,list_applications_by_candidate,list_applications_by_job,list_all_applications
 from interview import start_interview_process,interview_sessions,handle_answer_process,get_conversation_data
+from evaluation_report import generate_candidate_report
 # Load environment variables from .env
 load_dotenv()
 
@@ -364,6 +365,40 @@ def get_conversation(application_id):
     response, status_code = get_conversation_data(application_id)
     return jsonify(response), status_code
 
+@app.route('/generate-report', methods=['POST'])
+def generate_report_endpoint():
+    data = request.json
+    application_id = data.get('application_id')
+
+    if not application_id:
+        return jsonify({"error": "application_id is required"}), 400
+
+    try:
+        pdf_path = generate_candidate_report(application_id)
+        return jsonify({"message": f"✅ Report successfully generated: {pdf_path}"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+from bson import ObjectId
+from flask import Flask, jsonify, request
+
+app = Flask(__name__)
+
+@app.route('/report-path/<application_id>', methods=['GET'])
+def get_report_path(application_id):
+    try:
+        application = mongo.db.applications.find_one({"_id": ObjectId(application_id)})
+        if not application:
+            return jsonify({"error": "Application not found"}), 404
+        
+        report_path = application.get("report_path")
+        if not report_path:
+            return jsonify({"error": "Report not found for this application"}), 404
+        
+        return jsonify({"report_path": report_path}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 # Start the Flask app
 if __name__ == '__main__':
     app.run(debug=True)
