@@ -12,6 +12,8 @@ from chat import extract_text_from_pdf, get_cv_chat_response, extract_text_from_
 from apply import apply_to_job,list_applications_by_candidate,list_applications_by_job,list_all_applications
 from interview import start_interview_process,interview_sessions,handle_answer_process,get_conversation_data
 from evaluation_report import generate_candidate_report
+from bson import ObjectId
+
 # Load environment variables from .env
 load_dotenv()
 
@@ -379,10 +381,6 @@ def generate_report_endpoint():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-from bson import ObjectId
-from flask import Flask, jsonify, request
-
-app = Flask(__name__)
 
 @app.route('/report-path/<application_id>', methods=['GET'])
 def get_report_path(application_id):
