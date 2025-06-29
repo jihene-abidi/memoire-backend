@@ -10,6 +10,7 @@ from flask import send_from_directory
 from cv import get_all_user_cvs, add_cv, update_user_cv, delete_user_cv, get_all_public_cvs, search_public_cvs_logic, download_cv_logic, get_cv_file_path, get_cv_path,get_cv_by_id
 from chat import extract_text_from_pdf, get_cv_chat_response, extract_text_from_pdf,analyze_cv_text, analyze_cv_text_skills
 from apply import apply_to_job,list_applications_by_candidate,list_applications_by_job,list_all_applications
+from interview import start_interview_process,interview_sessions,handle_answer_process,get_conversation_data
 # Load environment variables from .env
 load_dotenv()
 
@@ -336,6 +337,32 @@ def apply():
         return jsonify({"error": "Missing 'candidate_id', 'job_id' or 'cv_id'"}), 400
 
     return apply_to_job(candidate_id, job_id, cv_id)
+
+
+@app.route('/start', methods=['POST'])
+def start_interview():
+    data = request.json
+    application_id = data.get("application_id")
+
+    if not application_id:
+        return jsonify({"error": "Missing application_id"}), 400
+
+    response, status_code = start_interview_process(application_id)
+    return jsonify(response), status_code
+
+@app.route('/answer', methods=['POST'])
+def handle_answer():
+    data = request.json
+    application_id = data.get("application_id")
+    user_answer = data.get("answer")
+
+    response, status_code = handle_answer_process(application_id, user_answer)
+    return jsonify(response), status_code
+
+@app.route('/conversation/<application_id>', methods=['GET'])
+def get_conversation(application_id):
+    response, status_code = get_conversation_data(application_id)
+    return jsonify(response), status_code
 
 # Start the Flask app
 if __name__ == '__main__':
