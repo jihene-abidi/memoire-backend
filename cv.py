@@ -1,10 +1,10 @@
-from flask import  url_for,jsonify,send_file
-from werkzeug.utils import secure_filename
-from bson import ObjectId
-import os
-import uuid
-from datetime import datetime
-from db import mongo
+from flask import  jsonify,send_file #jsonify pour convertir un dictionnaire python en json # send file sert un fichier en tant que réponse HTTP.
+from werkzeug.utils import secure_filename # pour la sécurité, nettoie le nom du fichier pour éviter les noms dangereux
+from bson import ObjectId # permet de manipuler les identifiants MongoDB (_id).
+import os # utilisé ici pour gérer les chemins de fichiers.
+import uuid # pour générer des noms de fichiers uniques.
+from datetime import datetime # pour enregistrer la date et l’heure de création ou de modification.
+from db import mongo # objet qui permet d'accéder à la base de données MongoDB (défini dans db.py).
 
 def add_cv(user_id, file, title, expertise, cv_txt, visibility='private'):
 
@@ -24,15 +24,15 @@ def add_cv(user_id, file, title, expertise, cv_txt, visibility='private'):
         return {"error": "Only PDF files are allowed"}, 400
 
     # Save file
-    unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+    unique_filename = f"{uuid.uuid4().hex}{file_extension}" # génrer un nom unique
     upload_folder = os.getenv('UPLOAD_CV_FOLDER', 'uploads/cvs')  # fallback folder
-    filepath = upload_folder +"/" + unique_filename
+    filepath = upload_folder +"/" + unique_filename # concatination du nom du fichier
     try:
-        file.save(filepath)
+        file.save(filepath) # sauvegarde physique
     except Exception as e:
         return {"error": f"Failed to save file: {str(e)}"}, 500
 
-    # Insert CV record
+    # Insert CV record dans la base 
     cv_data = {
         "user_id": ObjectId(user_id),
         "title": title,
@@ -50,17 +50,17 @@ def get_all_user_cvs(user_id):
     # Convert user_id to ObjectId if it’s not already
     user_id = ObjectId(user_id)
 
-    # Fetch CVs from the cvs collection that belong to this user
+    # Récupère tous les CVs de cet utilisateur.
     cvs_cursor = mongo.db.cvs.find({"user_id": user_id})
 
     # Convert the cursor to a list of dictionaries (and convert _id to string)
     cvs_list = []
     for cv in cvs_cursor:
         cv["_id"] = str(cv["_id"])
-        cv["user_id"] = str(cv["user_id"])
+        cv["user_id"] = str(cv["user_id"]) # Convertit les IDs Mongo en chaînes pour le JSON.
         cvs_list.append(cv)
 
-    return jsonify( cvs_list), 200
+    return jsonify( cvs_list), 200 # Retourne la liste au format JSON.
 
 def update_user_cv(user_id, cv_id, data):
     user_id = ObjectId(user_id)

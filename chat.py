@@ -5,7 +5,7 @@ from langchain.chains import ConversationChain
 from langchain.schema import SystemMessage, AIMessage
 from langchain.schema import HumanMessage
 import json
-import fitz
+import fitz # pour faire lextraction depuis pdf
 import os
 import re
 from dotenv import load_dotenv
@@ -20,7 +20,7 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 llm = ChatOpenAI(model="gpt-4o", openai_api_key=OPENAI_API_KEY)
 
 # Dictionary to store separate memory per CV ID
-memory_store = {}
+memory_store = {} # pour séparer la memoire de chaque cv et chaque user
 
 def get_cv_chat_response(cv_id, cv_text, question):
     # Use separate memory for each CV ID
@@ -42,7 +42,7 @@ def get_cv_chat_response(cv_id, cv_text, question):
     )
 
     # Add system prompt + CV text if memory is empty
-    if not memory.buffer:
+    if not memory.buffer: #.buffer pour acceder au memoire
         conversation.memory.chat_memory.add_message(
             SystemMessage(content=system_prompt + f"\n\nHere is the user's CV:\n{cv_text}")
         )
@@ -118,7 +118,7 @@ def extract_text_from_pdf(pdf_path):
         doc = fitz.open(pdf_path)
         print("PDF opened successfully.")
         text = ""
-        for i, page in enumerate(doc):
+        for i, page in enumerate(doc): # je vais parcourir le pdf page par page pour extracter le text
             page_text = page.get_text()
 
             text += page_text
@@ -217,20 +217,20 @@ def extract_job_info_from_description(job_text):
       
     )
 
-    # Build messages
+    # Build messages : juste préparer la disccusion avec chat
     messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=f"Here is the job description:{job_text}")
-    ]
+        SystemMessage(content=system_prompt), # ce que je vais envoyer au chatgpt
+        HumanMessage(content=f"Here is the job description:{job_text}") # le message de l'humain qui se change
+    ]# f utiliser pour formater le format du variable qui est en {}
 
     # Run LLM without history/memory
-    response = llm.invoke(messages)
-
+    response = llm.invoke(messages) # pour communiquer avec caht
+    # reponse retourne le contenue json, date d'envoie et de reception de message, tokens envoyer et token de son reponse
     # Try parsing the response as JSON
     try:
         #  Remove backticks and code block formatting if present
         cleaned_answer = re.sub(r"```(?:json)?\n(.*?)\n```", r"\1", response.content, flags=re.DOTALL).strip()
-        parsed = json.loads(cleaned_answer)
+        parsed = json.loads(cleaned_answer) # jsonify la reponse
         print (parsed)
         return parsed
     except Exception as e:

@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 from selenium.webdriver.chrome.options import Options
 
-options = Options()
+options = Options() # pour désactiver chrome
 options.add_argument('--headless')  # Run in headless mode (no GUI)
 load_dotenv()
 
@@ -32,8 +32,8 @@ def extract_company_and_title(driver):
     try:
         company_elem = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CLASS_NAME, "job-details-jobs-unified-top-card__company-name"))
-        )
-        company_name = company_elem.text
+        ) # il retourne tout le body html
+        company_name = company_elem.text # ilfaut extraire que le texte c.a.d le contenu
     except Exception as e:
         print("Could not find company name:", e)
 
@@ -52,10 +52,10 @@ def extract_location(driver):
     try:
         tertiary_container = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CLASS_NAME, "job-details-jobs-unified-top-card__tertiary-description-container"))
-        )
+        ) # dans le div il y a plusieurs span je dois extraire seulement le span de localisation
         spans = tertiary_container.find_elements(By.CLASS_NAME, "tvm__text--low-emphasis")
         if spans:
-            location = spans[0].text
+            location = spans[0].text # il faut prendre que le contenue de la premiere span car ils ont tous le meme nom de classe
     except Exception as e:
         print("Could not extract location:", e)
     return location
@@ -66,8 +66,9 @@ def extract_job_insights(driver):
     level = "None"
     try:
         insights = driver.find_elements(By.CSS_SELECTOR, "li.job-details-jobs-unified-top-card__job-insight span")
-        job_info = [i.text.strip() for i in insights if i.text.strip() != ""]
-        if len(job_info) > 0:
+        job_info = [i.text.strip() for i in insights if i.text.strip() != ""] #strip pour nettoyer le contenu from les espaces
+        # c'est une liste donc il faut accéder à chaque element de cette liste et extraire le texte
+        if len(job_info) > 0: # element job_info[0] contient licone donc je commence par le deuxieme element
             work_type = job_info[1] if len(job_info) > 1 else "None"
             contract_type = job_info[2] if len(job_info) > 2 else "None"
             level = job_info[3] if len(job_info) > 3 else "None"
