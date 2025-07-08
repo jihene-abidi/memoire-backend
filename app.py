@@ -393,10 +393,17 @@ def get_report_path(application_id):
         if not report_path:
             return jsonify({"error": "Report not found for this application"}), 404
         
-        return jsonify({"report_path": report_path}), 200
+        return jsonify({
+            "source": "http://127.0.0.1:5000/static/"+report_path ,  # convert to full URL
+            "name": os.path.basename(report_path)
+        }), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/static/uploads/report/<filename>')
+def download_report_file(filename):
+    return send_from_directory('uploads/report', filename)
 # Start the Flask app
 if __name__ == '__main__':
     app.run(debug=True)
