@@ -16,8 +16,8 @@ def create_job_offers(job_data):
         "skills": job_data.get("skills", []),
         "level": job_data.get("level"),
         "published_on": job_data.get("published_on", datetime.now().isoformat()),
-        "job_description": job_data.get("job_description"),
-        "salary": job_data.get("salary"),
+        "job_description": job_data.get("description"),
+        "salary": job_data.get("salaire"),
         "contract_duration": job_data.get("contract_duration"),
         "start_date": job_data.get("start_date"),
          "visibility":job_data.get("visibility"),
@@ -33,6 +33,7 @@ def create_job_offer_from_linkedin_url(user_id, job_url, visibility):
     try:
         scraped_data = scrape_linkedin_job_details(job_url)
         extracted_data=extract_job_info_from_description(scraped_data.get("Full Text"))
+        published_on_str = datetime.now().isoformat()
         job_offer = {
             "created_by": ObjectId(user_id),
             "title": scraped_data.get("Job Title"),
@@ -40,7 +41,7 @@ def create_job_offer_from_linkedin_url(user_id, job_url, visibility):
             "location": scraped_data.get("Location"),
             "technologies": (extracted_data.get("technologies")),  
             "skills": (extracted_data.get("skills")),       
-            "published_on": datetime.now(),
+            "published_on": published_on_str,
             "job_description": extracted_data.get("summary"),
             "salary": None,      
             "contract_duration": scraped_data.get("Contract Type"),
@@ -49,6 +50,7 @@ def create_job_offer_from_linkedin_url(user_id, job_url, visibility):
             "visibility": visibility,
             "start_date": None
         }
+        # assert isinstance(job_offer["published_on"], str), "published_on is not a string!"
 
         mongo.db.job_offers.insert_one(job_offer)
         return {"message": "Job offer created successfully"}, 201
