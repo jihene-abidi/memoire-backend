@@ -25,11 +25,6 @@ def apply_to_job(candidate_id, job_id, cv_id):
         if not cv_path:
             return jsonify({"error": "CV path is missing"}), 500
 
-        # Extract CV text
-        cv_txt = extract_text_from_pdf(cv_path)
-        if not cv_txt:
-            return jsonify({"error": "Failed to extract text from CV"}), 500
-
         # Prevent duplicate application
         existing_application = mongo.db.applications.find_one({
             "candidate_id": ObjectId(candidate_id),
@@ -50,7 +45,7 @@ def apply_to_job(candidate_id, job_id, cv_id):
             "candidate_id": ObjectId(candidate_id),
             "job_id": ObjectId(job_id),
             "cv_id": ObjectId(cv_id),
-            "cv_text": cv_txt,
+            "cv_text":  cv.get("cv_txt"),
             "cv_path": cv_path,
             "applied_at": datetime.now(),
             "application_code": unique_code
@@ -67,7 +62,7 @@ def apply_to_job(candidate_id, job_id, cv_id):
             "candidate_id": candidate_id,
             "job_id": job_id,
             "cv_id": cv_id,
-            "cv_text": cv_txt,
+            "cv_text": cv.get("cv_txt"),
             "cv_path": cv_path,
             "applied_at": datetime.now(),
             "application_code": unique_code

@@ -25,7 +25,7 @@ def add_cv(user_id, file, title, expertise, cv_txt, visibility='private'):
 
     # Save file
     unique_filename = f"{uuid.uuid4().hex}{file_extension}" # génrer un nom unique
-    upload_folder = os.getenv('UPLOAD_CV_FOLDER', 'uploads/cvs')  # fallback folder
+    upload_folder = os.getenv('', 'uploads/cvs')  # fallback folder
     filepath = upload_folder +"/" + unique_filename # concatination du nom du fichier
     try:
         file.save(filepath) # sauvegarde physique

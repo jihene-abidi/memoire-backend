@@ -208,27 +208,12 @@ def cv_chat(cv_id):
     if not question:
         return jsonify({"error": "Missing 'question'"}), 400
 
-    # Get the file path response
-    response, status = get_cv_file_path(cv_id)
 
-    # If the CV isn’t found
-    if status != 200:
-        return response, status
-
-
-    # Extract the actual path from the JSON response
-    pdf_path = response.get_json()["file_path"]
-
-
-    pdf_path = r"{}".format(pdf_path)
-
-    # Extract text from PDF
-    cv_text = extract_text_from_pdf(pdf_path)
-    if not cv_text:
-        return jsonify({"error": "Failed to extract text from PDF"}), 500
+    cv = mongo.db.cvs.find_one({"_id": ObjectId(cv_id)})
+    cv_txt = cv.get("cv_txt")
 
     # Call your chat function
-    answer ,history= get_cv_chat_response(cv_id,cv_text, question)
+    answer ,history= get_cv_chat_response(cv_id,cv_txt, question)
         # Optionally return full history for UI
 
     return jsonify({"answer": answer, "history": history}), 200
