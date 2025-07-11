@@ -386,9 +386,11 @@ def get_report_path(application_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/static/uploads/report/<filename>')
+@app.route('/static/uploads/reports/<filename>')
 def download_report_file(filename):
-    return send_from_directory('uploads/report', filename)
+    return send_from_directory('uploads/reports', filename)
+
+
 # Start the Flask app
 if __name__ == '__main__':
     app.run(debug=True)

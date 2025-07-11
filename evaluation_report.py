@@ -159,8 +159,10 @@ def generate_candidate_report(application_id):
     offer_text = candidate_data['job']
 
     report_content = generate_report(cv_text, chat_text, offer_text)
-    upload_folder = os.getenv('UPLOAD_report_FOLDER', 'uploads/report')  # fallback folder
-    pdf_path = os.path.join(upload_folder, f"rapport_entretien-{application_id}.pdf")
+    upload_folder = os.getenv('', 'uploads/reports')  # fallback folder
+    #pdf_path = os.path.join(upload_folder, f"rapport_entretien-{application_id}.pdf")
+	# upload_folder = os.getenv('', 'uploads/cvs')  # fallback folder
+    pdf_path = upload_folder +"/" + f"rapport_entretien-{application_id}.pdf" # concatination du nom du fichier
     
     generate_pdf(report_content, pdf_path)
 
