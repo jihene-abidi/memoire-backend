@@ -52,26 +52,19 @@ def generate_report(cv_text, chat_text, offer_text):
 		 "📋 **1. Informations du candidat**\n"
 		 "- **Nom et Prénom** : [extrait le nom et le prénom à partir du cv]\n"
 		 "- **Poste visé** : [Extrait de l’offre d’emploi]\n"
-		 "- **Date de l’entretien** : [date du géneration du reponse]\n"
-		 "- **Intervenants** : [Nom du recruteur / Manager]\n\n"
+		 "- **Ressoure humaines** : Hajer \n\n"
 
-		 "📎 **2. CV du candidat**\n"
-		 "- Lien ou pièce jointe du CV : [Indiquer si disponible]\n\n"
-
-		 "🎤 **3. Enregistrement de l’entretien**\n"
-		 "- Lien vers l’enregistrement : [Insérer le lien si fourni]\n\n"
-
-		 "🛠 **4. Compétences techniques (Hard Skills)**\n"
+		 "🛠 **2. Compétences techniques (Hard Skills)**\n"
 		 "- Évaluer les compétences en lien avec le poste et les noter sur 100%.\n"
 		 "  - **Maîtrise de [Logiciel/Technologie]** : XX%\n"
 		 "  - **Expérience en [Domaine/Industrie]** : XX%\n"
 		 "  - **Connaissance en [Sujet spécifique]** : XX%\n\n"
 
-		 "💡 **5. Compétences comportementales (Soft Skills)**\n"
+		 "💡 **3. Compétences comportementales (Soft Skills)**\n"
 		 "- Identifier et évaluer les soft skills observées pendant l’entretien.\n"
 		 "  - **Exemples** : Esprit d’équipe, Capacité d’adaptation, Leadership, Communication\n\n"
 
-		" 🌍 **6. Niveau de langue**\n"
+		" 🌍 **4. Niveau de langue**\n"
 		"- **Évaluer le niveau de langue du candidat à partir de la conversation d’entretien**\n"
 		"- Déterminer son niveau en fonction de la fluidité, de la précision grammaticale et de la richesse du vocabulaire.\n"
 		"- Si un test de langue a été réalisé, attribuer un niveau spécifique.8\n"
