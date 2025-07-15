@@ -1,14 +1,14 @@
 
 from langchain_openai import ChatOpenAI
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationChain
+from langchain.memory import ConversationBufferMemory # Permet de garder l’historique de la conversation.
+from langchain.chains import ConversationChain # Permet de simuler une discussion fluide.
 from langchain.schema import SystemMessage, AIMessage
 from langchain.schema import HumanMessage
 import json
-import fitz # pour faire lextraction depuis pdf
+import fitz # pour faire l'extraction du texte depuis pdf
 import os
 import re
-from dotenv import load_dotenv
+from dotenv import load_dotenv # Permet de charger les clés API stockées dans un fichier .env.
 # Load environment variables from .env
 load_dotenv()
 
@@ -17,13 +17,14 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 
-llm = ChatOpenAI(model="gpt-4o", openai_api_key=OPENAI_API_KEY)
+llm = ChatOpenAI(model="gpt-4o-mini", openai_api_key=OPENAI_API_KEY) # On instancie un objet ChatOpenAI avec GPT-4o (version optimisée de GPT-4).
 
 # Dictionary to store separate memory per CV ID
-memory_store = {} # pour séparer la memoire de chaque cv et chaque user
+memory_store = {} # dictionnaire pour stocker la mémoire de chaque cv et chaque user
 
+# discusion entre IA et candidat pour ameliorer son CV
 def get_cv_chat_response(cv_id, cv_text, question):
-    # Use separate memory for each CV ID
+    # Création d’une mémoire dédiée au CV.
     if cv_id not in memory_store:
         memory_store[cv_id] = ConversationBufferMemory(memory_key="history", return_messages=True)
     memory = memory_store[cv_id]
@@ -83,7 +84,7 @@ def analyze_cv_text(cv_text):
     )
 
     memory = ConversationBufferMemory(return_messages=True)
-    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
     conversation = ConversationChain(
         llm=llm,
@@ -181,7 +182,7 @@ def analyze_cv_text_skills(cv_text):
     )
 
     memory = ConversationBufferMemory(return_messages=True)
-    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
     conversation = ConversationChain(
         llm=llm,

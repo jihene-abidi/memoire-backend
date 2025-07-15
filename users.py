@@ -1,25 +1,25 @@
 from flask import request, jsonify, url_for,render_template
-from werkzeug.security import generate_password_hash,check_password_hash
-from flask_mail import Message
-from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
-from db import mongo, mail
-import os
-from dotenv import load_dotenv
-from bson import ObjectId
+from werkzeug.security import generate_password_hash,check_password_hash # 1- pour chiffrer un mot de passe. # 2- pour comparer un mot de passe fourni avec celui stocké.
+from flask_mail import Message # Pour envoyer des emails via Flask-Mail.
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature # Pour générer et valider des tokens sécurisés avec expiration 
+from db import mongo, mail # Connexions à la base MongoDB et au service mail
+import os # Pour charger les variables d’environnement depuis un fichier .env.
+from dotenv import load_dotenv # Pour charger les variables d’environnement depuis un fichier .env.
+from bson import ObjectId # Permet de manipuler les identifiants MongoDB
 from datetime import datetime,timezone, timedelta
-import jwt
-import uuid
-from werkzeug.utils import secure_filename
-import random
+import jwt # Pour générer et décoder des JSON Web Tokens (JWT)
+import uuid # Pour générer un identifiant unique
+from werkzeug.utils import secure_filename # Pour sécuriser le nom d’un fichier uploadé
+import random # Pour générer des nombres aléatoires
 
 
-# Load environment variables from .env
+# Chargement des variables d'environnement à partir du fichier .env
 load_dotenv()
-# Initialize the serializer with a secret key
+# Initialisation du sérialiseur avec une clé secrète (pour la vérification d'email)
 s = URLSafeTimedSerializer(os.getenv("EMAIL_TOKEN_SECRET"))
 
 
-
+# Inscription utilisateur
 def signup():
     data = request.json
     role = data.get("role")
@@ -29,15 +29,18 @@ def signup():
     if not role or not email or not password:
         return jsonify({"error": "Missing fields"}), 400
 
-    # Check if user already exists
+    # Vérifie si l'utilisateur existe déjà
     if mongo.db.users.find_one({"email": email}):
         return jsonify({"error": "Email already registered"}), 409
 
+    # Hash du mot de passe
     hashed_pw = generate_password_hash(password)
 
+    # Création d'un token de vérification
     token = s.dumps(email, salt='email-confirm')
     verification_link = url_for('verify_email', token=token, _external=True)
 
+    # Insertion de l'utilisateur non vérifié dans la base
     mongo.db.users.insert_one({
         "role": role,
         "email": email,
@@ -45,12 +48,15 @@ def signup():
         "is_verified": False
     })
 
+    # Envoi de l'e-mail de vérification
     msg = Message('Verify Your Email', recipients=[email])
     msg.body = f'Hi , click the link to verify your email: {verification_link}'
     mail.send(msg)
 
     return jsonify({"message": "Signup successful! Check your email to verify your account."}), 201
 
+
+# Vérification de l'adresse e-mail
 def verify_email_token(token):
     try:
         email = s.loads(token, salt='email-confirm', max_age=3600)
@@ -67,6 +73,8 @@ def verify_email_token(token):
     mongo.db.users.update_one({"email": email}, {"$set": {"is_verified": True}})
     return jsonify({"message": "Email verified successfully!"}), 200
 
+
+# Mise à jour du profil utilisateur (nom, prénom, téléphone)
 def update_user_profile(user_id, data):
     # On récupère uniquement les champs autorisés
     allowed_fields = {
@@ -91,7 +99,7 @@ def update_user_profile(user_id, data):
     
 
 
-
+# Connexion utilisateur
 def sign_in_user(data):
     email = data.get('email')
     password = data.get('password')
@@ -101,12 +109,15 @@ def sign_in_user(data):
 
     user = mongo.db.users.find_one({'email': email})
     if user and check_password_hash(user['password'], password):
-        token = jwt.encode({
-            'user_id': str(user['_id']),
-            'exp': datetime.now() + timedelta(hours=1)
-        }, os.getenv('SECRET_KEY'), algorithm='HS256')
+        if user['is_verified']:
+            token = jwt.encode({
+                'user_id': str(user['_id']),
+                'exp': datetime.now() + timedelta(hours=1)
+            }, os.getenv('SECRET_KEY'), algorithm='HS256')
 
-        return jsonify({'access_token': token}), 200
+            return jsonify({'access_token': token}), 200
+        else : 
+            return jsonify({'msg': 'email pas verifier'}), 401
     else:
         return jsonify({'msg': 'Invalid email or password'}), 401
 

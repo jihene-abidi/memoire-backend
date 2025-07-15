@@ -1,23 +1,27 @@
-import os
-from flask import Flask, request, jsonify
-from dotenv import load_dotenv
-from langchain.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
-from db import mongo
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
-from reportlab.lib import colors
-from bson import ObjectId
-load_dotenv()
+import os # Pour interagir avec les variables d'environnement
+from flask import Flask, request, jsonify # Pour créer une API web
+from dotenv import load_dotenv # Pour charger les variables d'environnement depuis un fichier .env
+from langchain.prompts import ChatPromptTemplate # Pour créer un prompt structuré pour le modèle
+from langchain_openai import ChatOpenAI  # Pour utiliser le modèle OpenAI via LangChain
+from db import mongo # Connexion à la base de données MongoDB
+from reportlab.lib.pagesizes import A4 # Format de page pour le PDF
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle # Styles de texte pour PDF
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer # Eléments de base pour créer le PDF
+from reportlab.lib import colors # Couleurs pour PDF
+from bson import ObjectId # Pour gérer les IDs MongoDB
+load_dotenv() # Charge les variables d'environnement depuis le fichier .env
+
+# Initialisation du modèle GPT-4o-mini avec un certain degré de créativité (temperature = 0.8)
 model = ChatOpenAI(model="gpt-4o-mini",temperature=0.8,openai_api_key=os.getenv("OPENAI_API_KEY"))
 
+# Fonction pour récupérer les données d'une candidature
 def fetch_application_data(application_id):
-    # Get application data
+    # Recherche la candidature par ID dans MongoDB
     application = mongo.db.applications.find_one({"_id": ObjectId(application_id)})
     if not application:
         raise Exception("Application not found.")
 
+    # Récupère les champs de la candidature
     cv_text = application.get("cv_text", "")
     conversation = application.get("conversation", [])
     job_id = application.get("job_id")
@@ -25,21 +29,23 @@ def fetch_application_data(application_id):
     if not job_id:
         raise Exception("Job ID missing in application.")
 
-    # Get job data
+    # Récupère l’offre d’emploi associée à cette candidature
     job = mongo.db.job_offers.find_one({"_id": ObjectId(job_id)})
     if not job:
         raise Exception("Job not found.")
 
     job_description = job.get("job_description", "")
 
+    # Retourne les données pertinentes
     return {
         "cv_txt": cv_text,
         "conversation": conversation,
         "job": job_description
     }
 
-
+# Fonction pour générer le contenu du rapport d'entretien en texte
 def generate_report(cv_text, chat_text, offer_text):
+    # Messages de consigne pour le modèle GPT
 	messages = [
 		("system", "You are an experienced recruiter in human resources. Your job is to evaluate a candidate based on their CV, the job offer, and the interview transcript."),
 		("human",
@@ -96,7 +102,8 @@ def generate_report(cv_text, chat_text, offer_text):
 
 		 )
 	]
-
+      
+    # Crée le prompt à envoyer au modèle à partir du template et des variables
 	prompt_template = ChatPromptTemplate.from_messages(
 		messages
 	)
@@ -106,13 +113,14 @@ def generate_report(cv_text, chat_text, offer_text):
 		"chat_text": chat_text,
 		"offer_text": offer_text
 	})
+      
+    # Envoie le prompt au modèle et récupère la réponse
 	result = model.invoke(prompt)
-
 	return result.content
 
 
 
-
+# Fonction qui génère un fichier PDF à partir du contenu texte
 def generate_pdf(content, filename):
 
 	doc = SimpleDocTemplate(str(filename), pagesize=A4,
@@ -121,22 +129,27 @@ def generate_pdf(content, filename):
 	elements = []
 	styles = getSampleStyleSheet()
 
+	# Style pour le titre du rapport
 	title_style = ParagraphStyle(
 		'TitleStyle', parent=styles['Title'], fontSize=14, spaceAfter=10, alignment=1
 	)
 
+	# Style pour le texte normal
 	normal_style = ParagraphStyle(
 		'NormalStyle', parent=styles['Normal'], fontSize=10, leading=14, spaceAfter=6
 	)
 
+	# Titre du rapport
 	elements.append(Paragraph("📄 **Rapport d’Entretien**", title_style))
 	elements.append(Spacer(1, 10))
 
+	# Ajout de chaque paragraphe du contenu
 	for paragraph in content.split("\n"):
 		if paragraph.strip():
 			elements.append(Paragraph(paragraph, normal_style))
 			elements.append(Spacer(1, 4))
 
+    # Fonction pour ajouter un pied de page avec numéro
 	def footer(canvas, doc):
 		canvas.setFont("Helvetica", 8)
 		canvas.setFillColor(colors.grey)
@@ -145,21 +158,32 @@ def generate_pdf(content, filename):
 	doc.build(elements, onLaterPages=footer, onFirstPage=footer)
 
 
+# Fonction principale pour générer un rapport PDF pour une candidature
 def generate_candidate_report(application_id):
+    
+    # Étape 1 : Récupération des données
+    
     candidate_data = fetch_application_data(application_id)
     cv_text = candidate_data['cv_txt']
     chat_text = candidate_data['conversation']
     offer_text = candidate_data['job']
 
+	# Étape 2 : Génération du rapport avec GPT
+
     report_content = generate_report(cv_text, chat_text, offer_text)
-    upload_folder = os.getenv('', 'uploads/reports')  # fallback folder
-    #pdf_path = os.path.join(upload_folder, f"rapport_entretien-{application_id}.pdf")
-	# upload_folder = os.getenv('', 'uploads/cvs')  # fallback folder
+    
+	# Étape 3 : Définir le chemin du fichier PDF à générer
+      
+    upload_folder = os.getenv('', 'uploads/reports')  # Chemin de sauvegarde
     pdf_path = upload_folder +"/" + f"rapport_entretien-{application_id}.pdf" # concatination du nom du fichier
     
+	# Étape 4 : Générer le PDF
+
     generate_pdf(report_content, pdf_path)
 
-    # Update the application document with the report path
+    # Étape 5 : Enregistrer le chemin du PDF dans la base de données
+
+    # Mise à jour de la base de données avec le chemin du rapport
     mongo.db.applications.update_one(
         {"_id": ObjectId(application_id)},
         {"$set": {"report_path": pdf_path}}

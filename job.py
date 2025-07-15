@@ -1,14 +1,15 @@
 from flask import jsonify,request
 from datetime import datetime
 from db import mongo
-from bson import ObjectId
-import re
+from bson import ObjectId # Pour convertir les identifiants MongoDB en ObjectId
+import re # Pour les expressions régulières, utilisées dans la recherche
 from scrape import scrape_linkedin_job_details
 from chat import extract_job_info_from_description
 
+# Crée une offre d'emploi à partir de données envoyées par l'utilisateur
 def create_job_offers(job_data):
     job_offer = {
-        "created_by":ObjectId(job_data.get("user")['_id']),
+        "created_by":ObjectId(job_data.get("user")['_id']), # l'id de créateur de l'offre, converti en ObjectId MongoDB
         "title": job_data.get("title"),
         "company": job_data.get("company"),
         "location": job_data.get("location"),
@@ -24,11 +25,12 @@ def create_job_offers(job_data):
     }
 
     try:
-        mongo.db.job_offers.insert_one(job_offer)
+        mongo.db.job_offers.insert_one(job_offer) # Insertion dans la collection job_offers
         return jsonify({"message": "Job offer created successfully"}), 201
     except Exception as e:
         return jsonify({"message": "Failed to create job offer", "error": str(e)}), 500
 
+# Crée une offre automatiquement à partir d'une URL LinkedIn
 def create_job_offer_from_linkedin_url(user_id, job_url, visibility):
     try:
         scraped_data = scrape_linkedin_job_details(job_url)
@@ -58,6 +60,7 @@ def create_job_offer_from_linkedin_url(user_id, job_url, visibility):
     except Exception as e:
         return {"message": "Failed to create job offer", "error": str(e)}, 500
 
+# Supprime une offre d'emploi selon son ID
 def delete_job_offer_by_id(job_id):
     result = mongo.db.job_offers.delete_one({"_id": ObjectId(job_id)})
     
@@ -66,12 +69,12 @@ def delete_job_offer_by_id(job_id):
     else:
         return jsonify({"error": "Job offer not found."}), 404
     
-# Function to convert ObjectId to string
+# Convertit l'ObjectId MongoDB en string lisible
 def convert_objectid(job):
     job["_id"] = str(job["_id"])
     return job
 
-# Function to list all job offers
+# Récupère toutes les offres visibles publiquement
 def list_all_job_offers():
     try:
         job_offers_cursor = mongo.db.job_offers.find({"visibility": "public"})
@@ -80,6 +83,7 @@ def list_all_job_offers():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
+# Récupère une offre précise par ID
 def get_job_offer_by_id(job_id):
     try:
         job_offer = mongo.db.job_offers.find_one({"_id": ObjectId(job_id)})
@@ -92,7 +96,9 @@ def get_job_offer_by_id(job_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
 
+# Met à jour une offre par ID avec les données reçues
 def update_job_offer_by_id(job_id, update_data):
     if not update_data:
         return jsonify({"error": "No data provided for update"}), 400
@@ -111,6 +117,8 @@ def update_job_offer_by_id(job_id, update_data):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+# Récupère les offres créées par un utilisateur donné
 def get_jobs_by_user(user_id):
     try:
         user_object_id = ObjectId(user_id)
@@ -121,7 +129,7 @@ def get_jobs_by_user(user_id):
         return jsonify({"error": str(e)}), 500
 
 
-
+# Recherche des offres par mot-clé dans plusieurs champs
 def search_job_offers():
     try:
         keyword = request.args.get('keyword', '')

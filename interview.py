@@ -1,25 +1,28 @@
-from db import mongo
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationChain
-from langchain_openai import ChatOpenAI
-from bson import ObjectId
-import logging
-import os
-from dotenv import load_dotenv
+from db import mongo # Connexion à la base de données MongoDB
+from langchain.memory import ConversationBufferMemory # Garder l'historique de la conversation
+from langchain.chains import ConversationChain # Chaîne de conversation LangChain
+from langchain_openai import ChatOpenAI # Intégration de l'API OpenAI avec LangChain
+from bson import ObjectId # Manipulation d'identifiants MongoDB
+import logging # Pour le logging des erreurs
+import os # permet d'accéder aux variables d’environnement.
+from dotenv import load_dotenv # Chargement des variables d'environnement
 # Load environment variables from .env
 load_dotenv()
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY') # Récupère la clé API OpenAI depuis le fichier .env
 
+
+#   FONCTION POUR EXTRAIRE LES DONNÉES DE CANDIDATURE
 def fetch_application_data(application_id):
     """
     Fetch candidate CV text and job technologies from the database given an application ID.
     """
     try:
+        # Recherche de la candidature par ID
         candidate = mongo.db.applications.find_one({"_id": ObjectId(application_id)})
         if not candidate:
             print(f"No Application found for identifier: {application_id}")
             return None
-
+        # Récupère le texte du CV et l’ID du job associé.
         cv_txt = candidate.get("cv_text", "")
         job_id = candidate.get("job_id")
 
@@ -27,15 +30,17 @@ def fetch_application_data(application_id):
             print(f"No job_id found for candidate with application_code: {application_id}")
             return None
 
-        # Convert job_id to ObjectId if necessary
+        # Convert job_id to ObjectId
         if not isinstance(job_id, ObjectId):
             job_id = ObjectId(job_id)
 
+        # Recherche de l'offre d'emploi correspondante
         job_offer = mongo.db.job_offers.find_one({"_id": job_id})
         if not job_offer:
             print(f"No job found for job_id: {job_id}")
             return None
 
+       # Extraction des technologies du poste
         job_technologies = job_offer.get("technologies", [])
         if isinstance(job_technologies, list):
             job_technologies = ", ".join(job_technologies)
@@ -51,7 +56,7 @@ def fetch_application_data(application_id):
         logging.error(f"Error fetching candidate data: {str(e)}")
         return None
 
-
+#   AJOUTER UN MESSAGE À LA CONVERSATION
 def append_message(application_id, gpt_msg, user_msg, interview_completed=False):
     # Append new message pair to conversation array and update interview_completed flag
     mongo.db.applications.update_one(
@@ -64,14 +69,17 @@ def append_message(application_id, gpt_msg, user_msg, interview_completed=False)
                     
                 }
             },
-            "$set": {
-                "interview_completed": interview_completed
+            "$set": {  # Met à jour le statut interview_completed dans la candidature (Vrai ou Faux).
+                "interview_completed": interview_completed 
             }
         },
-        upsert=False
+        upsert=False #  N’insert pas une nouvelle candidature
     )
 
+
+#  GÉNÉRER UN MESSAGE SYSTÈME
 def generate_system_message(cv_txt, job_technologies):
+    # Génère un prompt structuré pour guider le comportement du chatbot
     return (
         f"Vous êtes Hajer, responsable du recrutement chez Chosa, et vous menez un entretien téléphonique avec un candidat. "
         f"Sur la base de son CV : {cv_txt}, vous évaluez sa candidature pour un poste correspondant aux exigences suivantes : {job_technologies}. "
@@ -130,11 +138,14 @@ def generate_system_message(cv_txt, job_technologies):
 
 
 
-# Chat model setup
+# INITIALISER LE MODÈLE GPT
 llm = ChatOpenAI(model_name="gpt-4", temperature=0.7)
 
-# Interview sessions stored in memory (for testing only; use a DB in production)
+#  Mémoire temporaire des sessions
 interview_sessions = {}
+
+
+# DÉBUTER L'ENTRETIEN
 def start_interview_process(application_id):
     # Fetch application data (CV text and job technologies)
     application_data = fetch_application_data(application_id)
@@ -147,11 +158,11 @@ def start_interview_process(application_id):
 
     application = mongo.db.applications.find_one({"_id": ObjectId(application_id)})
 
-    # Block restart if interview completed
+    # Vérifie si l'entretien a déjà été réalisé
     if application and application.get("interview_completed", False):
         return {"error": "Interview already completed. You cannot start it again."}, 403
 
-    # Reset conversation if interview not completed
+    # Réinitialise la conversation si besoin
     if application:
         mongo.db.applications.update_one(
             {"_id": ObjectId(application_id)},
@@ -172,7 +183,7 @@ def start_interview_process(application_id):
     session_id = "default"
     interview_sessions[session_id] = chain
 
-    # First GPT message
+    # Démarrage de la conversation
     response = chain.predict(input="Commencez l'entretien.")
 
     # Save first message to DB
@@ -185,6 +196,8 @@ def start_interview_process(application_id):
 
     return {"question": response}, 200
 
+
+# GÉRER LA RÉPONSE DU CANDIDAT
 def handle_answer_process(application_id, user_answer):
     session_id = "default"
     
@@ -195,10 +208,10 @@ def handle_answer_process(application_id, user_answer):
     if not chain:
         return {"error": "Interview not started"}, 400
 
-    # Get GPT reply
+    # Obtenir la réponse GPT
     gpt_response = chain.predict(input=user_answer)
 
-    # Check if interview is over
+    # Vérification si l'entretien est terminé
     interview_completed = any(kw in gpt_response.lower() for kw in [
         "bye bye", "au revoir", "merci pour cet échange",
         "l’entretien est terminé", "good bye", "have a good day"
@@ -218,6 +231,7 @@ def handle_answer_process(application_id, user_answer):
     }, 200
 
 
+# RÉCUPÉRER LA CONVERSATION
 def get_conversation_data(application_id):
     try:
         application = mongo.db.applications.find_one({"_id": ObjectId(application_id)})
